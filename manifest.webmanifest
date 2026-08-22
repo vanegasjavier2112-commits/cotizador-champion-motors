@@ -1,0 +1,12 @@
+{
+  "name": "Cotizador Champion Motors",
+  "short_name": "CotizaAuto",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#eef1f6",
+  "theme_color": "#071f49",
+  "description": "Cotizador de financiamiento de Champion Motors Panamá.",
+  "icons": [
+    {"src":"champion_motors_logo.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
