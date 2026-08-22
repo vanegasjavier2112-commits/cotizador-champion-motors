@@ -60,255 +60,402 @@ function datos(){
 function calcular(){const d=datos();document.getElementById("letra").textContent=money(d.letra);document.getElementById("resumen").textContent=`Con ${money(d.abono)} de abono a ${d.plazo} meses`}
 function limpiar(){document.getElementById("cliente").value="";document.getElementById("vehiculo").value="";document.getElementById("precio").value=12500;document.getElementById("plazo").value=60;document.getElementById("tasa").value=7.5;document.getElementById("ajuste").value=24.25;abonoPct=20;document.querySelectorAll(".option").forEach(x=>x.classList.toggle("active",x.dataset.p==="20"));calcular()}
 function txt(doc,t,x,y,s,b,c){doc.setFont("helvetica",b?"bold":"normal");doc.setFontSize(s);doc.setTextColor(...c);doc.text(String(t),x,y)}
-function descargarPDF(){
- function descargarPDF(){
+function descargarPDF(){=========-------------------= <script>
+function calcular() {
+  const cliente = document.getElementById("cliente").value.trim();
+  const vehiculo = document.getElementById("vehiculo").value.trim();
+
+  const precio = Number(document.getElementById("precio").value) || 0;
+  const plazo = Number(document.getElementById("plazo").value) || 60;
+  const tasa = Number(document.getElementById("tasa").value) || 0;
+  const ajuste = Number(document.getElementById("ajuste").value) || 0;
+
+  const activo = document.querySelector(".option.active");
+  const abonoPct = activo ? Number(activo.dataset.p) : 20;
+
+  const abono = precio * abonoPct / 100;
+  const financiado = precio - abono;
+
+  const tasaMensual = tasa / 100 / 12;
+
+  let letraBase;
+
+  if (tasaMensual > 0) {
+    letraBase =
+      financiado *
+      tasaMensual /
+      (1 - Math.pow(1 + tasaMensual, -plazo));
+  } else {
+    letraBase = financiado / plazo;
+  }
+
+  const letra = letraBase * (1 + ajuste / 100);
+
+  document.getElementById("letra").textContent =
+    money(letra);
+
+  document.getElementById("resumen").textContent =
+    "Con " + money(abono) + " de abono a " + plazo + " meses";
+
+  return {
+    cliente,
+    vehiculo,
+    precio,
+    plazo,
+    tasa,
+    ajuste,
+    abonoPct,
+    abono,
+    financiado,
+    letra
+  };
+}
+
+
+/* FORMATO DE DINERO */
+function money(valor) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2
+  }).format(valor || 0);
+}
+
+
+/* ACTIVAR LOS BOTONES DE ABONO */
+document.querySelectorAll(".option").forEach(option => {
+  option.addEventListener("click", function () {
+
+    document.querySelectorAll(".option").forEach(o => {
+      o.classList.remove("active");
+    });
+
+    this.classList.add("active");
+
+    calcular();
+  });
+});
+
+
+/* =========================
+   GENERAR PDF PROFESIONAL
+   ========================= */
+
+async function generarPDF() {
+
+  const datos = calcular();
+
   const { jsPDF } = window.jspdf;
+
   const doc = new jsPDF({
     unit: "mm",
-    format: "a4",
+    format: "letter",
     orientation: "portrait"
   });
 
-  const d = datos();
-  const cliente = document.getElementById("cliente").value.trim() || "Cliente";
-  const vehiculo = document.getElementById("vehiculo").value.trim() || "Vehículo";
-  const W = 210;
+  const W = 215.9;
+  const H = 279.4;
 
-  const azul = [7,31,73];
-  const amarillo = [255,212,0];
-  const gris = [90,100,115];
-  const grisClaro = [235,238,243];
-  const blanco = [255,255,255];
+  const navy = [7, 31, 73];
+  const blue = [16, 54, 112];
+  const yellow = [255, 212, 0];
+  const gray = [100, 112, 130];
+  const light = [242, 245, 249];
+  const white = [255, 255, 255];
 
-  function texto(t,x,y,s=10,b=false,c=azul,align="left"){
-    doc.setFont("helvetica", b ? "bold" : "normal");
-    doc.setFontSize(s);
-    doc.setTextColor(...c);
-    doc.text(String(t), x, y, { align });
+  /* FONDO */
+  doc.setFillColor(248, 249, 252);
+  doc.rect(0, 0, W, H, "F");
+
+  /* FRANJA SUPERIOR */
+  doc.setFillColor(...navy);
+  doc.rect(0, 0, W, 42, "F");
+
+  doc.setFillColor(...yellow);
+  doc.rect(0, 0, W, 3, "F");
+
+  /* LOGO */
+  const logo = document.getElementById("logo");
+
+  if (logo && logo.complete && logo.naturalWidth > 0) {
+    try {
+      doc.addImage(
+        logo,
+        "PNG",
+        15,
+        7,
+        38,
+        27
+      );
+    } catch (e) {
+      console.log("No se pudo cargar el logo en el PDF");
+    }
   }
 
-  function linea(y){
-    doc.setDrawColor(...grisClaro);
-    doc.setLineWidth(0.35);
-    doc.line(25,y,185,y);
-  }
+  /* ENCABEZADO */
+  doc.setTextColor(...white);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.text("CHAMPION MOTORS", 60, 17);
 
-  function money(n){
-    return new Intl.NumberFormat("en-US",{
-      style:"currency",
-      currency:"USD"
-    }).format(Number(n)||0);
-  }
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Cotización de letra mensual", 60, 25);
+  doc.text("Estimación referencial de financiamiento", 60, 32);
 
-  /* =========================
-     ENCABEZADO
-     ========================= */
+  /* CONTACTO */
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("WhatsApp", 178, 15, { align: "right" });
 
-  doc.setFillColor(...azul);
-  doc.rect(0,0,W,38,"F");
+  doc.setFontSize(12);
+  doc.text("6627-7341", 200, 22, { align: "right" });
 
-  // Línea amarilla superior
-  doc.setFillColor(...amarillo);
-  doc.rect(0,0,W,3,"F");
+  /* TITULO */
+  doc.setTextColor(...navy);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(17);
+  doc.text("COTIZACIÓN DE LETRA MENSUAL", W / 2, 57, {
+    align: "center"
+  });
 
-  // Logo pequeño y controlado
-  try{
-    doc.addImage(logoData,"PNG",18,7,43,24);
-  }catch(e){
-    // Si el logo no carga, el PDF continúa normalmente
-  }
-
-  texto("CHAMPION MOTORS",82,13,12,true,blanco);
-  texto("COTIZACIONES Y FINANCIAMIENTO",82,20,7,false,[220,225,235]);
-
-  texto("6627-7341",188,12,9,true,blanco,"right");
-  texto("WhatsApp",188,18,7,false,[220,225,235],"right");
-  texto("Panamá, Panamá",188,24,7,false,[220,225,235],"right");
-  texto("@championmotorspty",188,30,7,false,[220,225,235],"right");
-
-  /* =========================
-     TÍTULO
-     ========================= */
-
-  texto(
-    "COTIZACIÓN DE LETRA MENSUAL",
-    W/2,
-    52,
-    16,
-    true,
-    azul,
-    "center"
-  );
-
-  doc.setDrawColor(...amarillo);
+  doc.setDrawColor(...yellow);
   doc.setLineWidth(1);
-  doc.line(78,57,132,57);
+  doc.line(75, 62, 141, 62);
 
-  texto(
-    "Estimación referencial de financiamiento",
-    W/2,
-    64,
-    8.5,
-    false,
-    gris,
-    "center"
+
+  /* DATOS DEL CLIENTE */
+  let y = 76;
+
+  doc.setFillColor(...white);
+  doc.roundedRect(15, y, 185.9, 39, 4, 4, "F");
+
+  doc.setTextColor(...gray);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+
+  doc.text("CLIENTE", 23, y + 10);
+  doc.text("VEHÍCULO", 23, y + 25);
+
+  doc.setTextColor(...navy);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+
+  doc.text(
+    cliente || "No especificado",
+    60,
+    y + 10
   );
 
-  /* =========================
-     DATOS PRINCIPALES
-     ========================= */
-
-  texto("CLIENTE",25,78,8,true,gris);
-  texto(cliente,25,86,11,true,azul);
-
-  texto("VEHÍCULO",110,78,8,true,gris);
-  texto(vehiculo,110,86,11,true,azul);
-
-  linea(94);
-
-  /* =========================
-     INFORMACIÓN FINANCIERA
-     ========================= */
-
-  texto("Precio del auto",30,108,9,true,gris);
-  texto(money(d.precio),180,108,11,true,azul,"right");
-
-  texto("Abono inicial",30,124,9,true,gris);
-  texto(
-    `${money(d.abono)} (${Number(d.abonoPct).toFixed(1)}%)`,
-    180,
-    124,
-    11,
-    true,
-    azul,
-    "right"
+  doc.text(
+    vehiculo || "No especificado",
+    60,
+    y + 25
   );
 
-  texto("Plazo",30,140,9,true,gris);
-  texto(`${d.plazo} meses`,180,140,11,true,azul,"right");
 
-  texto("Tasa anual",30,156,9,true,gris);
-  texto(`${Number(d.tasa).toFixed(2)}%`,180,156,11,true,azul,"right");
+  /* INFORMACIÓN FINANCIERA */
+  y = 124;
 
-  linea(166);
+  doc.setTextColor(...navy);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("INFORMACIÓN FINANCIERA", 15, y);
 
-  /* =========================
-     LETRA MENSUAL
-     ========================= */
+  doc.setDrawColor(215, 220, 228);
+  doc.setLineWidth(0.4);
+  doc.line(15, y + 4, 200, y + 4);
 
-  doc.setFillColor(...azul);
-  doc.roundedRect(25,175,160,42,6,6,"F");
 
-  texto(
+  function fila(label, valor, yy) {
+
+    doc.setTextColor(...gray);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(label, 18, yy);
+
+    doc.setTextColor(...navy);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(valor, 198, yy, {
+      align: "right"
+    });
+
+    doc.setDrawColor(225, 228, 233);
+    doc.line(18, yy + 4, 198, yy + 4);
+  }
+
+  fila("Precio del auto", money(datos.precio), y + 15);
+
+  fila(
+    "Abono inicial (" + datos.abonoPct + "%)",
+    money(datos.abono),
+    y + 29
+  );
+
+  fila(
+    "Monto a financiar",
+    money(datos.financiado),
+    y + 43
+  );
+
+  fila(
+    "Plazo",
+    datos.plazo + " meses",
+    y + 57
+  );
+
+  fila(
+    "Tasa anual referencial",
+    datos.tasa.toFixed(2) + "%",
+    y + 71
+  );
+
+  fila(
+    "Ajuste estimado",
+    datos.ajuste.toFixed(2) + "%",
+    y + 85
+  );
+
+
+  /* RESULTADO PRINCIPAL */
+  y = 218;
+
+  doc.setFillColor(...navy);
+  doc.roundedRect(
+    15,
+    y,
+    185.9,
+    36,
+    5,
+    5,
+    "F"
+  );
+
+  doc.setTextColor(...white);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+
+  doc.text(
     "LETRA MENSUAL ESTIMADA",
-    W/2,
-    188,
-    9,
-    true,
-    blanco,
-    "center"
+    23,
+    y + 11
   );
 
-  texto(
-    money(d.letra),
-    W/2,
-    207,
-    21,
-    true,
-    amarillo,
-    "center"
+  doc.setTextColor(...yellow);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(25);
+
+  doc.text(
+    money(datos.letra),
+    23,
+    y + 27
   );
 
-  /* =========================
-     NOTA
-     ========================= */
+  doc.setTextColor(...white);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
 
-  texto(
-    "Esta cifra es una estimación referencial.",
-    25,
-    228,
-    8,
-    false,
-    gris
+  doc.text(
+    "Estimación referencial sujeta a aprobación de la entidad financiera.",
+    198,
+    y + 11,
+    { align: "right" }
   );
 
-  texto(
-    "Puede variar según seguro, comisiones, gastos y aprobación bancaria.",
-    25,
-    235,
-    8,
-    false,
-    gris
+  doc.text(
+    datos.plazo + " meses • Abono " + datos.abonoPct + "%",
+    198,
+    y + 21,
+    { align: "right" }
   );
 
-  /* =========================
-     IMPORTANTE
-     ========================= */
 
-  doc.setDrawColor(...azul);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(25,245,160,30,5,5);
+  /* NOTA */
+  y = 264;
 
-  texto(
-    "IMPORTANTE",
-    35,
-    255,
-    9,
-    true,
-    azul
+  doc.setTextColor(...gray);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+
+  doc.text(
+    "La letra mostrada es una estimación referencial y puede variar según seguro,",
+    15,
+    y
   );
 
-  texto(
-    "Para iniciar el trámite de financiamiento se solicita:",
-    35,
-    263,
-    7.8,
-    false,
-    gris
+  doc.text(
+    "comisiones, gastos y condiciones de aprobación del financiamiento.",
+    15,
+    y + 4
   );
 
-  texto(
-    "SEPARACIÓN DEL AUTO Y AVALÚO.",
-    35,
-    270,
-    8.5,
-    true,
-    azul
+  /* PIE */
+  doc.setTextColor(...navy);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+
+  doc.text(
+    "CHAMPION MOTORS • Panamá, Panamá",
+    200,
+    y + 4,
+    { align: "right" }
   );
 
-  /* =========================
-     PIE
-     ========================= */
 
-  doc.setFillColor(...azul);
-  doc.rect(0,282,W,15,"F");
+  /* NOMBRE DEL ARCHIVO */
+  const safe =
+    (datos.vehiculo || "cotizacion")
+      .replace(/[^a-z0-9áéíóúñü -]/gi, "")
+      .trim()
+      .replace(/\s+/g, "_");
 
-  texto(
-    "Confianza, Calidad y Compromiso",
-    25,
-    291,
-    8,
-    false,
-    blanco
+  doc.save(
+    "Cotizacion_Champion_Motors_" +
+    (safe || "cotizacion") +
+    ".pdf"
   );
+}
 
-  texto(
-    "CHAMPION MOTORS",
-    185,
-    291,
-    8,
-    true,
-    amarillo,
-    "right"
-  );
 
-  /* =========================
-     GUARDAR PDF
-     ========================= */
+/* BOTÓN PDF */
+document
+  .getElementById("pdf")
+  ?.addEventListener("click", generarPDF);
 
-  const safe = vehiculo
-    .replace(/[^a-z0-9_ -]+/gi,"_")
-    .trim() || "cotizacion";
+
+/* CALCULAR AUTOMÁTICAMENTE */
+[
+  "precio",
+  "plazo",
+  "tasa",
+  "ajuste",
+  "cliente",
+  "vehiculo"
+].forEach(id => {
+
+  const elemento = document.getElementById(id);
+
+  if (elemento) {
+    elemento.addEventListener("input", calcular);
+    elemento.addEventListener("change", calcular);
+  }
+});
+
+
+/* CÁLCULO INICIAL */
+calcular();
+
+
+/* SERVICE WORKER */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js");
+  });
+}
+</script>
+</body>
+</html>
 
   doc.save(`Cotizacion_Champion_Motors_${safe}.pdf`);
 }izacion_Champion_Motors_${safe}.pdf`);
